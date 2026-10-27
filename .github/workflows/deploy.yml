@@ -1,0 +1,285 @@
+name: Deploy
+
+# Manual deployment of the server to the `staging` or `production` GitHub environment, by SSH:
+# the bundle, package.json and the PM2 ecosystem go up with rsync, and deploy/remote-deploy.sh
+# reloads PM2 without downtime and checks that every instance serves the new version.
+#
+# This file holds no server data. Host, user, paths, ports, process name, keys and the rest live
+# in the secrets of each environment (see the README). The logs of a public repository are
+# public, so nothing from the server is printed: rsync, ssh and pm2 output is discarded and only
+# the fixed `DEPLOY:` lines of the remote script, or "ok" / "failed", reach the log.
+#
+# Production deploys only from main or a v* tag, and only after the environment's required
+# reviewer approves. Pull requests never get secrets: there is no pull_request_target here.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        # Staging by default: a careless dispatch must never reach production.
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions: {}
+
+# Staging and production share one PM2 daemon on the server, which accepts one reload at a time.
+# This group queues the runs of this repository; deployments from other repositories to the same
+# daemon are serialized on the server by DEPLOY_LOCK_FILE (see deploy/remote-deploy.sh).
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Check the ref
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      # First: a dispatch from the wrong ref fails before building or asking for approval.
+      - name: Production only from main or a v* tag
+        if: inputs.environment == 'production'
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          case "$REF" in
+            refs/heads/main | refs/tags/v*) echo "ok" ;;
+            *)
+              echo "::error::production deploys only from main or a v* tag"
+              exit 1
+              ;;
+          esac
+
+  # Everything that runs code from the repository happens here, without any secret.
+  build:
+    name: Build, test and bundle
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:deploy
+      - run: npm run build
+      - run: npm run bundle
+
+      # The artifact that goes up starts here first: if it does not start, it never reaches the
+      # server (a reload would not replace healthy workers with ones that cannot start anyway).
+      - run: npm run smoke
+
+      - name: Prepare the release
+        run: |
+          mkdir -p out/files
+          cp dist/bundle/server.mjs dist/bundle/server.mjs.map package.json \
+            deploy/ecosystem.config.cjs out/files/
+          cp deploy/remote-deploy.sh out/
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: out/
+          if-no-files-found: error
+          retention-days: 3
+
+  deploy:
+    name: Deploy (${{ inputs.environment }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    permissions: {}
+    env:
+      SSH_DIR: ${{ runner.temp }}/ssh
+    steps:
+      # Secrets are masked by Actions. Values derived from them are not, so they are masked here,
+      # before anything else runs. Very short pieces are left out: masking "/" or "app" would
+      # garble the whole log without hiding anything.
+      - name: Mask derived values
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          APP_DIR: ${{ secrets.APP_DIR }}
+          DEPLOY_HOME: ${{ secrets.DEPLOY_HOME }}
+          NODE_BIN_DIR: ${{ secrets.NODE_BIN_DIR }}
+          PM2_BIN: ${{ secrets.PM2_BIN }}
+          DEPLOY_LOCK_FILE: ${{ secrets.DEPLOY_LOCK_FILE }}
+          HEALTH_URL: ${{ secrets.HEALTH_URL }}
+        run: |
+          mask() {
+            if [ "${#1}" -ge 4 ]; then echo "::add-mask::$1"; fi
+          }
+          mask "$SSH_USER@$SSH_HOST"
+          for path in "$APP_DIR" "$DEPLOY_HOME" "$NODE_BIN_DIR" "$PM2_BIN" "$DEPLOY_LOCK_FILE"; do
+            [ -n "$path" ] || continue
+            IFS=/ read -ra parts <<< "$path"
+            for part in "${parts[@]}"; do mask "$part"; done
+          done
+          authority="${HEALTH_URL#*://}"
+          authority="${authority%%/*}"
+          mask "$authority"
+          mask "${authority%:*}"
+          echo "ok"
+
+      - name: Check the environment configuration
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          APP_DIR: ${{ secrets.APP_DIR }}
+          PM2_APP_NAME: ${{ secrets.PM2_APP_NAME }}
+          APP_PORT: ${{ secrets.APP_PORT }}
+          HEALTH_URL: ${{ secrets.HEALTH_URL }}
+        run: |
+          missing=""
+          for name in SSH_HOST SSH_USER SSH_PRIVATE_KEY SSH_KNOWN_HOSTS APP_DIR PM2_APP_NAME APP_PORT HEALTH_URL; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::missing secrets in this environment:$missing"
+            exit 1
+          fi
+          echo "ok"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: release
+
+      - name: Set up SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p "$SSH_DIR"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_DIR/key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$SSH_DIR/known_hosts"
+          if ! ssh-keygen -y -f "$SSH_DIR/key" > /dev/null 2>&1; then
+            echo "::error::SSH_PRIVATE_KEY is not a usable private key (it must have no passphrase)"
+            exit 1
+          fi
+          # Every connection goes through this alias: no host or user on any command line, the
+          # host key must already be in SSH_KNOWN_HOSTS, and no banner or warning is printed.
+          {
+            echo "Host deploy-target"
+            echo "  HostName $SSH_HOST"
+            echo "  User $SSH_USER"
+            echo "  Port ${SSH_PORT:-22}"
+            echo "  IdentityFile $SSH_DIR/key"
+            echo "  IdentitiesOnly yes"
+            echo "  UserKnownHostsFile $SSH_DIR/known_hosts"
+            echo "  StrictHostKeyChecking yes"
+            echo "  BatchMode yes"
+            echo "  LogLevel QUIET"
+            echo "  ConnectTimeout 20"
+            echo "  ServerAliveInterval 30"
+          } > "$SSH_DIR/config"
+          echo "ok"
+
+      - name: Upload the release
+        env:
+          APP_DIR: ${{ secrets.APP_DIR }}
+        run: |
+          # Only these four files: .env.local, logs and anything else in APP_DIR stay untouched.
+          if rsync -rlz --protect-args -e "ssh -F $SSH_DIR/config" release/files/ \
+            "deploy-target:$APP_DIR/" > /dev/null 2>&1; then
+            echo "upload ok"
+          else
+            echo "::error::upload failed"
+            exit 1
+          fi
+
+      - name: Reload on the server
+        env:
+          DEPLOY_ENV: ${{ inputs.environment }}
+          APP_DIR: ${{ secrets.APP_DIR }}
+          MCP_PM2_NAME: ${{ secrets.PM2_APP_NAME }}
+          MCP_PORT: ${{ secrets.APP_PORT }}
+          MCP_INSTANCES: ${{ vars.PM2_INSTANCES }}
+          MCP_SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+          HEALTH_URL: ${{ secrets.HEALTH_URL }}
+          DEPLOY_HOME: ${{ secrets.DEPLOY_HOME }}
+          NODE_BIN_DIR: ${{ secrets.NODE_BIN_DIR }}
+          PM2_BIN: ${{ secrets.PM2_BIN }}
+          DEPLOY_LOCK_FILE: ${{ secrets.DEPLOY_LOCK_FILE }}
+          FILE_OWNER: ${{ secrets.FILE_OWNER }}
+        run: |
+          EXPECTED_VERSION="$(jq -r .version release/files/package.json)"
+          # The inputs go first on the script's stdin, quoted for bash: nothing about the server
+          # appears on the remote command line.
+          remote_input() {
+            for name in DEPLOY_ENV APP_DIR EXPECTED_VERSION MCP_PM2_NAME MCP_PORT MCP_INSTANCES \
+              MCP_SERVICE_NAME HEALTH_URL DEPLOY_HOME NODE_BIN_DIR PM2_BIN DEPLOY_LOCK_FILE FILE_OWNER; do
+              printf 'export %s=%q\n' "$name" "${!name}"
+            done
+            cat release/remote-deploy.sh
+          }
+          status=0
+          remote_input | ssh -F "$SSH_DIR/config" deploy-target 'bash -s' \
+            > "$RUNNER_TEMP/remote.out" 2> /dev/null || status=$?
+          # Only the fixed lines of the remote script reach the log.
+          grep '^DEPLOY: ' "$RUNNER_TEMP/remote.out" || true
+          rm -f "$RUNNER_TEMP/remote.out"
+          if [ "$status" -ne 0 ]; then
+            echo "::error::deploy failed (exit $status)"
+            exit 1
+          fi
+          echo "deploy ok: $EXPECTED_VERSION"
+
+      - name: Remove the SSH material
+        if: always()
+        run: rm -rf "$SSH_DIR"
+
+      # A Datadog event on failure, if DD_API_KEY is set. It never fails the job.
+      - name: Report the failure to Datadog
+        if: failure()
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: ${{ vars.DD_SITE }}
+          SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+          DEPLOY_ENV: ${{ inputs.environment }}
+        run: |
+          if [ -z "$DD_API_KEY" ]; then
+            echo "DD_API_KEY not set: no event"
+            exit 0
+          fi
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          payload="$(jq -n \
+            --arg env "$DEPLOY_ENV" --arg sha "${GITHUB_SHA:0:8}" --arg url "$run_url" \
+            --arg service "${SERVICE_NAME:-mcp-server}" \
+            '{
+              title: "Deploy MCP server failed (\($env))",
+              text: "Deploy of \($sha) to \($env) failed. Run: \($url)",
+              priority: "normal",
+              alert_type: "error",
+              aggregation_key: "deploy-mcp-server-\($env)",
+              tags: ["service:\($service)", "deploy_env:\($env)", "source:github_actions", "deploy_status:failed"]
+            }')"
+          if curl -sf -X POST "https://api.${DD_SITE:-datadoghq.com}/api/v1/events" \
+            -H "Content-Type: application/json" -H "DD-API-KEY: $DD_API_KEY" \
+            -d "$payload" > /dev/null 2>&1; then
+            echo "event ok"
+          else
+            echo "::warning::Datadog event not sent (non-fatal)"
+          fi

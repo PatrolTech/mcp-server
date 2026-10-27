@@ -1,0 +1,90 @@
+name: Release
+
+# Creates the `v<version>` tag and GitHub release, with the bundle attached, when the version in
+# package.json has no release yet: on a merge to main that changes it, or by hand on main.
+# Pushing a tag by hand releases nothing on purpose: only what reached main through a pull
+# request with green CI is released. Deploying is a separate, manual workflow (deploy.yml).
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # Build without any secret or write permission; the release job only uploads the files.
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Read the version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Build, test and bundle
+        run: |
+          npm ci --ignore-scripts
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run test:deploy
+          npm run build
+          npm run bundle
+          npm run smoke
+
+      - name: Prepare the release files
+        run: |
+          mkdir -p out
+          cp dist/bundle/server.mjs dist/bundle/server.mjs.map out/
+          (cd out && sha256sum server.mjs server.mjs.map > SHA256SUMS)
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bundle
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # tag and GitHub release
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bundle
+          path: out
+
+      - name: Tag and create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: v${{ needs.build.outputs.version }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "::notice::Release $TAG already exists."
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes \
+              out/server.mjs out/server.mjs.map out/SHA256SUMS
+          fi

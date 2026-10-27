@@ -1,0 +1,46 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    cooldown:
+      default-days: 7
+      # Our own packages are followed without waiting: CI builds, tests and smoke-tests the
+      # bundle with every new version.
+      exclude:
+        - '@patroltech/agent-capabilities'
+        - '@patroltech/sdk-api'
+    ignore:
+      # A TypeScript major changes the emitted code and module options: on purpose only.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # Node types follow the oldest supported runtime (engines >=22.9), not the newest Node.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # An ESLint major changes the flat config and the plugin ecosystem: on purpose only.
+      - dependency-name: eslint
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@eslint/js'
+        update-types: ['version-update:semver-major']
+    groups:
+      # Each version of our own packages gets its own pull request.
+      patroltech:
+        patterns:
+          - '@patroltech/*'
+      # The MCP SDK packages move together.
+      modelcontextprotocol:
+        patterns:
+          - '@modelcontextprotocol/*'
+      dev-dependencies:
+        dependency-type: development
+        patterns:
+          - '*'
+        exclude-patterns:
+          - '@modelcontextprotocol/*'
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
