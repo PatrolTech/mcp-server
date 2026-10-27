@@ -4,9 +4,8 @@
  * `listOrganizations`, `getUserPreferences` y `createLocationQrSheetLink`, cada una con su
  * `get…Url`, más los tipos de las propuestas.
  *
- * Hoy salen del SDK interno de PatrolTech, que no se publica. Cuando estén en el contrato público
- * (`@patroltech/sdk-api` 1.3.0), el cambio es solo este módulo: importar de `@patroltech/sdk-api` y
- * subir esa dependencia en `package.json`. Ningún otro fichero importa un SDK directamente.
+ * Salen del contrato público (`@patroltech/sdk-api` ≥ 1.3.0). Ningún otro fichero importa el SDK
+ * directamente: si una versión nueva renombra algo, el cambio se queda aquí.
  */
 export {
   agentProposalExecutedRecently,
@@ -37,4 +36,4 @@ export {
   reopenAgentProposals,
   type AgentProposal,
   type AgentProposalItem,
-} from '@patroltech/sdk-api-private';
+} from '@patroltech/sdk-api';

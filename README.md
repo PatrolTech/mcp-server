@@ -92,8 +92,6 @@ curl http://127.0.0.1:3110/health
 
 Code layout follows the hexagonal style: `src/domain` (pure rules), `src/application` (use cases and their ports), `src/interface/mcp` (the MCP adapter) and `src/infrastructure` (HTTP, OAuth, SDK adapters, Redis, logging).
 
-> **Temporary:** thirteen operations used directly by this server (agent proposals, `listOrganizations`, `getUserPreferences` and `createLocationQrSheetLink`) are not in the public contract yet. Until they ship in `@patroltech/sdk-api` 1.3.0 they come from an internal SDK that is not published, through the single module [`src/infrastructure/patroltech/sdk.ts`](./src/infrastructure/patroltech/sdk.ts), so the type check, build and the tests that use it fail outside PatrolTech.
-
 ## Self-hosting
 
 You can run this server on your own infrastructure, for example to audit it or to put it in front of your own network policies.

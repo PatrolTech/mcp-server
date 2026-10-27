@@ -325,6 +325,10 @@ function carriedOver(live: FakeProposal[], items: Record<string, unknown>[]): Se
   return carried;
 }
 
+/**
+ * Una propuesta como la devuelve el contrato público: sin el dueño (usuario y cliente), que el
+ * backend guarda pero no expone. El conector no lo necesita: el backend ya acota cada llamada.
+ */
 function dto(row: FakeProposal) {
   return {
     id: row.id,
@@ -340,6 +344,5 @@ function dto(row: FakeProposal) {
     expiresAt: new Date(row.expiresAt).toISOString(),
     createdAt: new Date(row.createdAt).toISOString(),
     updatedAt: new Date(row.updatedAt).toISOString(),
-    clientId: row.clientId,
   };
 }
