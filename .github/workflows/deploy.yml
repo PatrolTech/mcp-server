@@ -105,9 +105,11 @@ jobs:
     timeout-minutes: 30
     environment: ${{ inputs.environment }}
     permissions: {}
-    env:
-      SSH_DIR: ${{ runner.temp }}/ssh
     steps:
+      # `runner.temp` is not available in a job-level `env`, so the SSH directory is set here.
+      - name: Set SSH directory
+        run: echo "SSH_DIR=$RUNNER_TEMP/ssh" >> "$GITHUB_ENV"
+
       # Secrets are masked by Actions. Values derived from them are not, so they are masked here,
       # before anything else runs. Very short pieces are left out: masking "/" or "app" would
       # garble the whole log without hiding anything.
