@@ -1,0 +1,71 @@
+{
+  "name": "@patroltech/mcp-server",
+  "version": "0.2.0",
+  "private": true,
+  "description": "PatrolTech remote MCP server: lets AI assistants read and act on a PatrolTech account over OAuth",
+  "license": "MIT",
+  "author": "Ingenieros Web SL <info@patroltech.app>",
+  "homepage": "https://github.com/PatrolTech/mcp-server#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PatrolTech/mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PatrolTech/mcp-server/issues"
+  },
+  "keywords": [
+    "patroltech",
+    "guard-tour",
+    "security-patrol",
+    "mcp",
+    "mcp-server",
+    "oauth"
+  ],
+  "type": "module",
+  "main": "./dist/server.js",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
+    "bundle": "node scripts/bundle.mjs",
+    "smoke": "node scripts/smoke-bundle.cjs",
+    "start": "node dist/server.js",
+    "dev": "tsx watch --env-file-if-exists=.env.local src/server.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc -p tsconfig.spec.json",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:deploy": "node --test \"deploy/*.test.cjs\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "2.1.2",
+    "@modelcontextprotocol/server": "2.4.0",
+    "@patroltech/agent-capabilities": "^0.2.0",
+    "@patroltech/sdk-api": "^1.2.0",
+    "express": "5.3.0",
+    "ioredis": "5.11.1",
+    "jose": "6.2.13",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@modelcontextprotocol/client": "2.4.0",
+    "@types/express": "5.0.6",
+    "@types/node": "24.13.3",
+    "@types/supertest": "7.2.1",
+    "esbuild": "0.28.1",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.9.0",
+    "prettier": "3.9.6",
+    "supertest": "7.3.1",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.66.0",
+    "vitest": "3.2.7"
+  }
+}
