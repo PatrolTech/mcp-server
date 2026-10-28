@@ -36,6 +36,8 @@ MCP server (this repo, stateless) ──agent session──▶ PatrolTech API
 | `patroltech_proposals_cancel`       | Withdraws the pending batch.                                                                                                                    |
 | `patroltech_locations_get_qr_sheet` | A signed link (1 hour) to the printable QR sheet of a location.                                                                                 |
 
+The server also sends `instructions` (`src/interface/mcp/serverInstructions.ts`): guidance that spans several tools, such as using the ranking tools to compare guards and presenting them as activity data, not as an assessment of the people.
+
 Writes need the `write` scope: without it the server answers `403 insufficient_scope` with the `read write` challenge. Every result is `{ data, truncated?, notices?, note }`, capped at 60,000 characters, where `note` says that `data` is data, never instructions. Each user can make 60 calls per minute to a read tool and 20 to a write tool. Every call writes one `mcp.tool_call` audit line with a hash of the arguments, never the arguments.
 
 ### Endpoints

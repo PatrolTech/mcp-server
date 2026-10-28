@@ -7,6 +7,7 @@ import { registerConfirmTools } from './tools/confirmTools.js';
 import { registerProposeTools } from './tools/proposeTools.js';
 import { registerQrSheetTool } from './tools/qrSheetTool.js';
 import { registerReadTools } from './tools/readTools.js';
+import { SERVER_INSTRUCTIONS } from './serverInstructions.js';
 import type { ToolBinding, ToolRuntime } from './registerCapabilityTool.js';
 import { proposableActions, type WriteToolDeps } from './tools/writeTools.js';
 
@@ -38,11 +39,10 @@ export function createMcpServerFactory(deps: McpServerFactoryDeps) {
         ? createSessionContextLoader(identity.agentSession, deps.runtime.directory)
         : UNAUTHENTICATED,
     };
-    const server = new McpServer({
-      name: 'patroltech',
-      title: 'PatrolTech',
-      version: deps.version,
-    });
+    const server = new McpServer(
+      { name: 'patroltech', title: 'PatrolTech', version: deps.version },
+      { instructions: SERVER_INSTRUCTIONS }
+    );
     registerAccountContextTool(server, binding, deps.gateway);
     registerReadTools(server, binding, deps.catalog.reads);
     registerProposeTools(server, binding, deps.catalog.actions, proposable, deps.writes);
