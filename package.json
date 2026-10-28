@@ -1,6 +1,6 @@
 {
   "name": "@patroltech/mcp-server",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "PatrolTech remote MCP server: lets AI assistants read and act on a PatrolTech account over OAuth",
   "license": "MIT",
