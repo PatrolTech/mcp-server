@@ -49,3 +49,22 @@ describe.each(ERAS)('server instructions (%s era)', (era) => {
     expect(harness.backend.apiCalls()).toHaveLength(0);
   });
 });
+
+describe.each(ERAS)('how to review this connection (%s era)', (era) => {
+  it('the account context tool, which every client lists, says where: Connected apps in the dashboard of the config', async () => {
+    harness = await startMcpHarness(issuer);
+    const client = await harness.connect(era);
+    const { tools } = await client.listTools();
+    const context = tools.find((t) => t.name === 'patroltech_account_get_context');
+
+    expect(context?.description).toContain('https://dashboard.example.test');
+    expect(context?.description).toMatch(/Connected apps/);
+    expect(context?.description).toMatch(/Aplicaciones conectadas/);
+    expect(context?.description).toMatch(/review or disconnect/i);
+    // Solo ahí: no se repite en el resto de herramientas.
+    const others = tools.filter(
+      (t) => t.name !== context?.name && (t.description ?? '').includes('Connected apps')
+    );
+    expect(others.map((t) => t.name)).toEqual([]);
+  });
+});

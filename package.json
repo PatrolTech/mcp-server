@@ -1,6 +1,6 @@
 {
   "name": "@patroltech/mcp-server",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "PatrolTech remote MCP server: lets AI assistants read and act on a PatrolTech account over OAuth",
   "license": "MIT",
@@ -44,7 +44,7 @@
   "dependencies": {
     "@modelcontextprotocol/node": "2.1.2",
     "@modelcontextprotocol/server": "2.4.0",
-    "@patroltech/agent-capabilities": "^0.2.1",
+    "@patroltech/agent-capabilities": "^0.2.2",
     "@patroltech/sdk-api": "^1.3.0",
     "express": "5.3.0",
     "ioredis": "5.11.1",

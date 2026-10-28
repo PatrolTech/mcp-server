@@ -27,14 +27,14 @@ MCP server (this repo, stateless) ──agent session──▶ PatrolTech API
 
 ### Tools
 
-| Tool                                | What it does                                                                                                                                    |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `patroltech_<area>_<read>`          | One per read of the catalog: read-only, English titles and descriptions, optional `organization` when the user has several.                     |
-| `patroltech_account_get_context`    | The user's organizations (name, role, access) and their locations.                                                                              |
-| `patroltech_<area>_propose_<verb>`  | Proposes a change. Nothing changes until it is confirmed. Proposals of one user and client form one batch (up to 10, expires after 30 minutes). |
-| `patroltech_proposals_confirm`      | Executes the whole pending batch, in order, with the parameters that were proposed (marked destructive: clients ask the user first).            |
-| `patroltech_proposals_cancel`       | Withdraws the pending batch.                                                                                                                    |
-| `patroltech_locations_get_qr_sheet` | A signed link (1 hour) to the printable QR sheet of a location.                                                                                 |
+| Tool                                | What it does                                                                                                                                               |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `patroltech_<area>_<read>`          | One per read of the catalog: read-only, English titles and descriptions, optional `organization` when the user has several.                                |
+| `patroltech_account_get_context`    | The user's organizations (name, role, access) and their locations. Its description says where to review this connection (`DASHBOARD_URL`, Connected apps). |
+| `patroltech_<area>_propose_<verb>`  | Proposes a change. Nothing changes until it is confirmed. Proposals of one user and client form one batch (up to 10, expires after 30 minutes).            |
+| `patroltech_proposals_confirm`      | Executes the whole pending batch, in order, with the parameters that were proposed (marked destructive: clients ask the user first).                       |
+| `patroltech_proposals_cancel`       | Withdraws the pending batch.                                                                                                                               |
+| `patroltech_locations_get_qr_sheet` | A signed link (1 hour) to the printable QR sheet of a location.                                                                                            |
 
 The server also sends `instructions` (`src/interface/mcp/serverInstructions.ts`): guidance that spans several tools, such as using the ranking tools to compare guards and presenting them as activity data, not as an assessment of the people.
 
