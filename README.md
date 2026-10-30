@@ -1,6 +1,6 @@
 # PatrolTech MCP server
 
-The remote [Model Context Protocol](https://modelcontextprotocol.io) server of [PatrolTech](https://patroltech.online), the guard tour and security patrol platform. It lets AI assistants such as Claude, ChatGPT, Copilot, Gemini or Cursor **read and act on a PatrolTech account** on behalf of a user who signs in with OAuth: rounds, routes, checkpoints, guards, incidents, users, locations, access control and scans.
+The remote [Model Context Protocol](https://modelcontextprotocol.io) server of [PatrolTech](https://patroltech.online?utm_source=github&utm_medium=referral&utm_campaign=ai_integrations&utm_content=mcp_readme_product), the guard tour and security patrol platform. It lets AI assistants such as Claude, ChatGPT, Copilot, Gemini or Cursor **read and act on a PatrolTech account** on behalf of a user who signs in with OAuth: rounds, routes, checkpoints, guards, incidents, users, locations, access control and scans.
 
 [![CI](https://github.com/PatrolTech/mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/PatrolTech/mcp-server/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -8,6 +8,14 @@ The remote [Model Context Protocol](https://modelcontextprotocol.io) server of [
 This repository holds only the server code. **To install the connector** in your assistant, use [PatrolTech/ai-integrations](https://github.com/PatrolTech/ai-integrations): plugins, MCP Registry entry and instructions for each client.
 
 > **This server grants no access by itself.** It has no credentials of its own: it forwards the user's token, and the PatrolTech API authorizes every call (organization and location roles, OAuth scopes and a closed list of writes allowed to agents). See [SECURITY.md](./SECURITY.md).
+
+## Connect without hosting a server
+
+Use the hosted endpoint `https://mcp.patroltech.online/mcp` with an MCP client that supports remote OAuth. The user's PatrolTech account and role determine access.
+
+[Create a free account](https://patroltech.online/en/start?utm_source=github&utm_medium=referral&utm_campaign=ai_integrations&utm_content=mcp_readme_signup) · [Connection guide](https://patroltech.online/en/features/integrations/mcp?utm_source=github&utm_medium=referral&utm_campaign=ai_integrations&utm_content=mcp_readme_guide) · [Agent skill and client plugins](https://github.com/PatrolTech/ai-integrations)
+
+Ask about missed patrol rounds, suspicious checkpoint scans, unreviewed checkpoints, incidents or visitor access logs. Supported changes are proposals and require explicit confirmation. Deleting records, inviting users and billing are outside the connector's capabilities.
 
 ## How it works
 
