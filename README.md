@@ -15,6 +15,8 @@ Use the hosted endpoint `https://mcp.patroltech.online/mcp` with an MCP client t
 
 [Create a free account](https://patroltech.online/en/start?utm_source=github&utm_medium=referral&utm_campaign=ai_integrations&utm_content=mcp_readme_signup) · [Connection guide](https://patroltech.online/en/features/integrations/mcp?utm_source=github&utm_medium=referral&utm_campaign=ai_integrations&utm_content=mcp_readme_guide) · [Agent skill and client plugins](https://github.com/PatrolTech/ai-integrations)
 
+Building your own integration instead? See the [API reference](https://patroltech.github.io/sdk-api/) of the public REST API and the [TypeScript SDK](https://github.com/PatrolTech/sdk-api). Webhooks are in development: tell us which events you need at **info@patroltech.app**.
+
 Ask about missed patrol rounds, suspicious checkpoint scans, unreviewed checkpoints, incidents or visitor access logs. Supported changes are proposals and require explicit confirmation. Deleting records, inviting users and billing are outside the connector's capabilities.
 
 For client setup, OAuth verification and troubleshooting, see the [agent installation guide](./llms-install.md), including Cline instructions.
@@ -172,7 +174,7 @@ The version lives only in `package.json`. When a change to it reaches `main`, th
 ## Related packages
 
 - [`@patroltech/agent-capabilities`](https://www.npmjs.com/package/@patroltech/agent-capabilities): the catalog of reads and proposed actions this server exposes.
-- [`@patroltech/sdk-api`](https://www.npmjs.com/package/@patroltech/sdk-api): the TypeScript SDK of the PatrolTech public API.
+- [`@patroltech/sdk-api`](https://www.npmjs.com/package/@patroltech/sdk-api): the TypeScript SDK of the PatrolTech public API ([API reference](https://patroltech.github.io/sdk-api/)).
 - [PatrolTech/ai-integrations](https://github.com/PatrolTech/ai-integrations): the connector for each AI assistant.
 
 ## License
