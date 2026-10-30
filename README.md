@@ -17,6 +17,8 @@ Use the hosted endpoint `https://mcp.patroltech.online/mcp` with an MCP client t
 
 Ask about missed patrol rounds, suspicious checkpoint scans, unreviewed checkpoints, incidents or visitor access logs. Supported changes are proposals and require explicit confirmation. Deleting records, inviting users and billing are outside the connector's capabilities.
 
+For client setup, OAuth verification and troubleshooting, see the [agent installation guide](./llms-install.md), including Cline instructions.
+
 ## How it works
 
 ```
