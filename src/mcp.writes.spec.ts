@@ -147,6 +147,8 @@ describe.each(ERAS)('tools/list of the write tools (%s era)', (era) => {
       ...CANCEL_ANNOTATIONS,
       title: byName.get(CANCEL)?.title,
     });
+    // Discarding a batch loses the proposals for good: the client must confirm it.
+    expect(byName.get(CANCEL)?.annotations?.destructiveHint).toBe(true);
     expect(byName.get(QR_SHEET)?.annotations).toEqual({
       ...QR_SHEET_ANNOTATIONS,
       title: byName.get(QR_SHEET)?.title,
