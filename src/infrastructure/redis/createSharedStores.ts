@@ -50,6 +50,10 @@ export function createSharedStores(options: CreateSharedStoresOptions): SharedSt
   }
 
   const client = new Redis(redisUrl, {
+    // ioredis 6 negocia RESP3 por defecto; aquí solo hay EVAL, SET y PING (sin pub/sub ni mapas),
+    // así que se mantiene RESP2, el protocolo que ya corre en producción, y no se depende de la
+    // versión del servidor Redis.
+    protocol: 2,
     enableOfflineQueue: false,
     maxRetriesPerRequest: 1,
     // Un Redis conectado pero colgado tampoco debe bloquear (el limitador corta igual a 500 ms).
