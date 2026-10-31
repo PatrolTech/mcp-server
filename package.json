@@ -1,6 +1,6 @@
 {
   "name": "@patroltech/mcp-server",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "private": true,
   "description": "PatrolTech remote MCP server: lets AI assistants read and act on a PatrolTech account over OAuth",
   "license": "MIT",
@@ -45,27 +45,27 @@
     "@modelcontextprotocol/node": "2.1.2",
     "@modelcontextprotocol/server": "2.4.0",
     "@patroltech/agent-capabilities": "^0.2.6",
-    "@patroltech/sdk-api": "^2.0.0",
+    "@patroltech/sdk-api": "^2.0.2",
     "express": "5.3.0",
-    "ioredis": "5.11.1",
+    "ioredis": "6.0.0",
     "jose": "6.2.13",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
     "@modelcontextprotocol/client": "2.4.0",
     "@types/express": "5.0.6",
-    "@types/node": "24.13.3",
+    "@types/node": "24.19.2",
     "@types/supertest": "7.2.1",
-    "esbuild": "0.28.1",
+    "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
-    "globals": "17.9.0",
-    "prettier": "3.9.6",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
     "supertest": "7.3.1",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.66.0",
-    "vitest": "3.2.7"
+    "typescript-eslint": "8.72.0",
+    "vitest": "5.0.5"
   }
 }
