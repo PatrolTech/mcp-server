@@ -3,7 +3,8 @@ name: Release
 # Creates the `v<version>` tag and GitHub release, with the bundle attached, when the version in
 # package.json has no release yet: on a merge to main that changes it, or by hand on main.
 # Pushing a tag by hand releases nothing on purpose: only what reached main through a pull
-# request with green CI is released. Deploying is a separate, manual workflow (deploy.yml).
+# request with green CI is released. Deploying is a separate workflow (deploy.yml), which runs
+# after this one and only goes ahead when this run created the release.
 on:
   push:
     branches: [main]

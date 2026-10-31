@@ -12,8 +12,8 @@ name: Deploy
 # Production deploys only from main or a v* tag, and only after the environment's required
 # reviewer approves. Pull requests never get secrets: there is no pull_request_target here.
 on:
-  # Automatic: every successful Release on main (a merged version bump) deploys that commit to
-  # production. The production environment's protection rules still apply.
+  # Automatic: a successful Release on main that created a new version deploys that commit to
+  # production (see the guard job). The production environment's protection rules still apply.
   workflow_run:
     workflows: [Release]
     types: [completed]
@@ -32,13 +32,6 @@ on:
 
 permissions: {}
 
-# Staging and production share one PM2 daemon on the server, which accepts one reload at a time.
-# This group queues the runs of this repository; deployments from other repositories to the same
-# daemon are serialized on the server by DEPLOY_LOCK_FILE (see deploy/remote-deploy.sh).
-concurrency:
-  group: deploy
-  cancel-in-progress: false
-
 jobs:
   guard:
     name: Check the ref
@@ -46,6 +39,8 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    outputs:
+      tagged: ${{ steps.tagged.outputs.tagged }}
     steps:
       # First: a dispatch from the wrong ref fails before building or asking for approval.
       - name: Production only from main or a v* tag
@@ -61,10 +56,27 @@ jobs:
               ;;
           esac
 
+      # Release also succeeds when the version already has a release, which is what any other
+      # change to package.json causes. Only the commit a new tag points at has something to deploy.
+      - name: Only a commit that Release tagged
+        id: tagged
+        if: github.event_name == 'workflow_run'
+        env:
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          tags="$(git ls-remote --tags "https://github.com/$REPO" 'v*')"
+          if grep -q "^$SHA" <<< "$tags"; then
+            echo "tagged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::This commit has no release of its own: nothing to deploy."
+          fi
+
   # Everything that runs code from the repository happens here, without any secret.
   build:
     name: Build, test and bundle
     needs: guard
+    if: github.event_name != 'workflow_run' || needs.guard.outputs.tagged == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -115,6 +127,13 @@ jobs:
     timeout-minutes: 30
     environment: ${{ github.event_name == 'workflow_run' && 'production' || inputs.environment }}
     permissions: {}
+    # Staging and production share one PM2 daemon on the server, which accepts one reload at a time.
+    # This group queues the deployments of this repository; those from other repositories to the
+    # same daemon are serialized on the server by DEPLOY_LOCK_FILE (see deploy/remote-deploy.sh).
+    # On this job, so a run with nothing to deploy never takes the place of one waiting in the group.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
     steps:
       # `runner.temp` is not available in a job-level `env`, so the SSH directory is set here.
       - name: Set SSH directory
