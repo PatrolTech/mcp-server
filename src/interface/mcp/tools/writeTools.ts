@@ -36,10 +36,14 @@ export const CONFIRM_ANNOTATIONS: ToolAnnotations = {
   openWorldHint: false,
 };
 
-/** Cancelar retira un lote pendiente (nada se hace); repetirlo no cambia nada más. */
+/**
+ * Cancelar descarta un lote pendiente: no toca la cuenta, pero las propuestas se pierden y no se
+ * recuperan (habría que volver a proponerlas), así que se declara destructiva para que el cliente
+ * lo confirme. Repetirlo no cambia nada más.
+ */
 export const CANCEL_ANNOTATIONS: ToolAnnotations = {
   readOnlyHint: false,
-  destructiveHint: false,
+  destructiveHint: true,
   idempotentHint: true,
   openWorldHint: false,
 };
