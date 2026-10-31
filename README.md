@@ -137,7 +137,7 @@ In cluster mode the workers run with the Node.js of the PM2 daemon, which must b
 
 ### With GitHub Actions
 
-[`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) deploys a fork of this repository by SSH, by hand (`workflow_dispatch`, `staging` by default). It builds, tests and smoke-tests the bundle without secrets, uploads the bundle, `package.json` and the ecosystem with rsync, and runs [`deploy/remote-deploy.sh`](./deploy/remote-deploy.sh) on the server: checks `.env.local`, reloads PM2 without downtime, probes the readiness URL and waits until every instance is online with the new version. `production` only deploys from `main` or a `v*` tag.
+[`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) deploys a fork of this repository by SSH: automatically to `production` after every successful [Release](./.github/workflows/release.yml) on `main` (a merged version bump), and by hand (`workflow_dispatch`, `staging` by default). It builds, tests and smoke-tests the bundle without secrets, uploads the bundle, `package.json` and the ecosystem with rsync, and runs [`deploy/remote-deploy.sh`](./deploy/remote-deploy.sh) on the server: checks `.env.local`, reloads PM2 without downtime, probes the readiness URL and waits until every instance is online with the new version. `production` only deploys from `main` or a `v*` tag.
 
 The workflow and the scripts contain no server data, and the logs print nothing from the server. Create the GitHub environments `staging` and `production` (with a required reviewer and a deployment branch rule for `main` and `v*` tags on `production`) and set, in each one:
 
