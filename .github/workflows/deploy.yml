@@ -1,6 +1,6 @@
 name: Deploy
 
-# Manual deployment of the server to the `staging` or `production` GitHub environment, by SSH:
+# Deployment of the server to the `staging` or `production` GitHub environment, by SSH:
 # the bundle, package.json and the PM2 ecosystem go up with rsync, and deploy/remote-deploy.sh
 # reloads PM2 without downtime and checks that every instance serves the new version.
 #
@@ -12,6 +12,12 @@ name: Deploy
 # Production deploys only from main or a v* tag, and only after the environment's required
 # reviewer approves. Pull requests never get secrets: there is no pull_request_target here.
 on:
+  # Automatic: every successful Release on main (a merged version bump) deploys that commit to
+  # production. The production environment's protection rules still apply.
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -36,12 +42,14 @@ concurrency:
 jobs:
   guard:
     name: Check the ref
+    # A failed or cancelled Release deploys nothing.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       # First: a dispatch from the wrong ref fails before building or asking for approval.
       - name: Production only from main or a v* tag
-        if: inputs.environment == 'production'
+        if: (github.event_name == 'workflow_run' && 'production' || inputs.environment) == 'production'
         env:
           REF: ${{ github.ref }}
         run: |
@@ -64,6 +72,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # After a Release, the exact commit it released; by hand, the dispatched ref.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -99,11 +109,11 @@ jobs:
           retention-days: 3
 
   deploy:
-    name: Deploy (${{ inputs.environment }})
+    name: Deploy (${{ github.event_name == 'workflow_run' && 'production' || inputs.environment }})
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: ${{ inputs.environment }}
+    environment: ${{ github.event_name == 'workflow_run' && 'production' || inputs.environment }}
     permissions: {}
     steps:
       # `runner.temp` is not available in a job-level `env`, so the SSH directory is set here.
@@ -214,7 +224,7 @@ jobs:
 
       - name: Reload on the server
         env:
-          DEPLOY_ENV: ${{ inputs.environment }}
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_run' && 'production' || inputs.environment }}
           APP_DIR: ${{ secrets.APP_DIR }}
           MCP_PM2_NAME: ${{ secrets.PM2_APP_NAME }}
           MCP_PORT: ${{ secrets.APP_PORT }}
@@ -260,7 +270,7 @@ jobs:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
           DD_SITE: ${{ vars.DD_SITE }}
           SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
-          DEPLOY_ENV: ${{ inputs.environment }}
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_run' && 'production' || inputs.environment }}
         run: |
           if [ -z "$DD_API_KEY" ]; then
             echo "DD_API_KEY not set: no event"
