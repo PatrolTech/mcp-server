@@ -50,14 +50,14 @@ MCP server (this repo, stateless) ──agent session──▶ PatrolTech API
 
 ### Prompts and resources
 
-Both are fixed text in `src/interface/mcp/guidance`: they change nothing in the account and call no backend, though the connection still needs OAuth like everything under `/mcp`.
+Both are fixed text in `src/interface/mcp/guidance`: they change nothing in the account and call no backend, so they do not go through the audit line or the rate limit of the tools. The connection still needs OAuth, like everything under `/mcp`.
 
-| Prompt                               | What it asks for                                               |
-| ------------------------------------ | -------------------------------------------------------------- |
-| `patroltech_review_missed_rounds`    | Rounds not completed and the checkpoints skipped (`period`).   |
-| `patroltech_review_suspicious_scans` | Suspicious, rejected or pending scans, and why (`period`).     |
-| `patroltech_weekly_summary`          | How the last week went, starting with what needs attention.    |
-| `patroltech_set_up_account`          | What is missing to get the account running, and the next step. |
+| Prompt                               | What it asks for                                                   |
+| ------------------------------------ | ------------------------------------------------------------------ |
+| `patroltech_review_missed_rounds`    | The latest rounds not completed and the checkpoints skipped.       |
+| `patroltech_review_suspicious_scans` | Suspicious or rejected scans, and how many are pending (`period`). |
+| `patroltech_weekly_summary`          | How the last week went, starting with what needs attention.        |
+| `patroltech_set_up_account`          | What is missing to get the account running, and the next step.     |
 
 | Resource                               | What it holds                                                    |
 | -------------------------------------- | ---------------------------------------------------------------- |
@@ -66,7 +66,7 @@ Both are fixed text in `src/interface/mcp/guidance`: they change nothing in the 
 
 The server also sends `instructions` (`src/interface/mcp/serverInstructions.ts`): guidance that spans several tools, such as using the ranking tools to compare guards and presenting them as activity data, not as an assessment of the people.
 
-Writes need the `write` scope: without it the server answers `403 insufficient_scope` with the `read write` challenge. Every result is `{ data, truncated?, notices?, note }`, capped at 60,000 characters, where `note` says that `data` is data, never instructions. Each user can make 60 calls per minute to a read tool and 20 to a write tool. Every call writes one `mcp.tool_call` audit line with a hash of the arguments, never the arguments.
+Writes need the `write` scope: without it the server answers `403 insufficient_scope` with the `read write` challenge. Every result is `{ data, truncated?, notices?, note }`, capped at 60,000 characters, where `note` says that `data` is data, never instructions. Each user can make 60 calls per minute to a read tool and 20 to a write tool. Every tool call writes one `mcp.tool_call` audit line with a hash of the arguments, never the arguments.
 
 ### Endpoints
 

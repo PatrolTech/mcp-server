@@ -66,38 +66,86 @@ describe.each(ERAS)('prompts (%s era)', (era) => {
     expect(harness.backend.apiCalls()).toHaveLength(0);
   });
 
-  it('uses the period given, and the last 7 days without one', async () => {
+  it('passes the period given to the tools, and last_7_days without one', async () => {
     harness = await startMcpHarness(issuer);
     const client = await harness.connect(era);
 
-    const given = await promptText(client, 'patroltech_review_missed_rounds', {
-      period: 'last night',
+    const given = await promptText(client, 'patroltech_review_suspicious_scans', {
+      period: 'yesterday',
     });
-    const missing = await promptText(client, 'patroltech_review_missed_rounds');
+    const missing = await promptText(client, 'patroltech_review_suspicious_scans');
 
-    expect(given).toContain('last night');
-    expect(missing).toContain('the last 7 days');
+    expect(given).toContain('period: yesterday');
+    expect(missing).toContain('period: last_7_days');
   });
 
-  it('refuses a period over its limit', async () => {
+  it('refuses a period the tools do not take', async () => {
     harness = await startMcpHarness(issuer);
     const client = await harness.connect(era);
 
     await expect(
       client.getPrompt({
-        name: 'patroltech_review_missed_rounds',
-        arguments: { period: 'x'.repeat(101) },
+        name: 'patroltech_review_suspicious_scans',
+        arguments: { period: 'last night' },
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow(/period/i);
+  });
+
+  it('asks the scan tools only for what they take', async () => {
+    harness = await startMcpHarness(issuer);
+    const client = await harness.connect(era);
+    const { tools } = await client.listTools();
+    const propertiesOf = (name: string) => {
+      const tool = tools.find((t) => t.name === name);
+      return tool?.inputSchema.properties as Record<string, { enum?: string[] }>;
+    };
+    const { prompts } = await client.listPrompts();
+    const period = prompts
+      .find((p) => p.name === 'patroltech_review_suspicious_scans')
+      ?.arguments?.find((a) => a.name === 'period');
+
+    expect(period?.required).toBeFalsy();
+    const scans = propertiesOf('patroltech_scans_list_recent');
+    expect(scans.suspiciousOnly).toBeDefined();
+    expect(scans.invalidOnly).toBeDefined();
+    for (const value of ['today', 'yesterday', 'last_7_days', 'last_30_days']) {
+      expect(scans.period?.enum).toContain(value);
+      expect(propertiesOf('patroltech_scans_count_by_patroller').period?.enum).toContain(value);
+    }
+  });
+
+  it('the prompt of missed rounds takes no period, because its tools cannot honour one', async () => {
+    harness = await startMcpHarness(issuer);
+    const client = await harness.connect(era);
+    const { prompts } = await client.listPrompts();
+    const { tools } = await client.listTools();
+
+    expect(
+      prompts.find((p) => p.name === 'patroltech_review_missed_rounds')?.arguments ?? []
+    ).toEqual([]);
+    for (const name of ['patroltech_rounds_get_status', 'patroltech_rounds_list_by_route']) {
+      const properties = tools.find((t) => t.name === name)?.inputSchema.properties ?? {};
+      expect(Object.keys(properties)).not.toContain('period');
+    }
+    expect(await promptText(client, 'patroltech_review_missed_rounds')).toMatch(
+      /only the most recent rounds/
+    );
+  });
+
+  it('refuses a prompt that does not exist', async () => {
+    harness = await startMcpHarness(issuer);
+    const client = await harness.connect(era);
+
+    await expect(client.getPrompt({ name: 'patroltech_nope' })).rejects.toThrow(/patroltech_nope/);
   });
 
   it('keeps the two-step rule and the care with people', async () => {
     harness = await startMcpHarness(issuer);
     const client = await harness.connect(era);
 
-    expect(await promptText(client, 'patroltech_set_up_account')).toMatch(
-      /patroltech_proposals_confirm only after I agree/
-    );
+    const setUp = await promptText(client, 'patroltech_set_up_account');
+    expect(setUp).toMatch(/patroltech_proposals_confirm only after I agree/);
+    expect(setUp).toMatch(/creating a guard, tell me to do it in the PatrolTech dashboard/);
     expect(await promptText(client, 'patroltech_review_suspicious_scans')).toMatch(
       /not an assessment/
     );
@@ -134,5 +182,23 @@ describe.each(ERAS)('resources (%s era)', (era) => {
       expect(named.filter((tool) => !tools.some((t) => t.name === tool))).toEqual([]);
     }
     expect(harness.backend.apiCalls()).toHaveLength(0);
+  });
+
+  it('refuses a guide that does not exist', async () => {
+    harness = await startMcpHarness(issuer);
+    const client = await harness.connect(era);
+
+    await expect(client.readResource({ uri: 'patroltech://guides/nope' })).rejects.toThrow(/nope/);
+  });
+
+  it('says which times are local and what the round statuses cover', async () => {
+    harness = await startMcpHarness(issuer);
+    const client = await harness.connect(era);
+
+    const text = JSON.stringify(await client.readResource({ uri: GUIDES[1] }));
+
+    expect(text).toMatch(/access logs, route schedules/);
+    expect(text).toMatch(/patroltech_rounds_get_status/);
+    expect(text).toMatch(/only the latest rounds of each route/);
   });
 });

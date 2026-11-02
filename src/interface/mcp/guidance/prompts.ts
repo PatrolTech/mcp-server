@@ -3,15 +3,13 @@ import { z } from 'zod';
 import { CONFIRM_TOOL } from '../../../application/proposals/proposalMessages.js';
 import { toolNameFor } from '../tools/toolNaming.js';
 
-const periodArgs = {
+const SCAN_PERIODS = ['today', 'yesterday', 'last_7_days', 'last_30_days'] as const;
+
+const scanPeriodArgs = {
   period: z
-    .string()
-    .trim()
-    .max(100)
+    .enum(SCAN_PERIODS)
     .optional()
-    .describe(
-      'The period to look at, in your own words (for example "last night"). Default: the last 7 days.'
-    ),
+    .describe(`The period to look at: ${SCAN_PERIODS.join(', ')}. Default: last_7_days.`),
 };
 
 const userMessage = (text: string) => ({
@@ -34,14 +32,14 @@ export function registerGuidancePrompts(server: McpServer): void {
     {
       title: 'Review missed rounds',
       description:
-        'Which rounds were not completed, on which routes, and which checkpoints were skipped.',
-      argsSchema: periodArgs,
+        'Which of the latest rounds of each route were not completed, and which checkpoints were skipped.',
     },
-    ({ period }) =>
+    () =>
       userMessage(
         lines(
-          `Review my PatrolTech rounds for ${period || 'the last 7 days'}.`,
-          `Start with ${toolNameFor('rounds.get_status')} and ${toolNameFor('rounds.list_by_route')}. For each incomplete round, use ${toolNameFor('rounds.get_round')} to see which checkpoints were skipped.`,
+          'Review how my latest PatrolTech rounds went.',
+          `Use ${toolNameFor('rounds.get_status')} for the totals of the last 7 days and ${toolNameFor('rounds.list_by_route')} for the latest rounds of each route. That list holds only the most recent rounds, so do not claim anything from it about every round of a period.`,
+          `For each incomplete round, use ${toolNameFor('rounds.get_round')} to see which checkpoints were skipped.`,
           'Tell me which rounds were not completed, on which route, with which guard, and what was missing, most recent first.',
           PARTIAL_DATA
         )
@@ -52,14 +50,14 @@ export function registerGuidancePrompts(server: McpServer): void {
     'patroltech_review_suspicious_scans',
     {
       title: 'Review suspicious scans',
-      description: 'Scans that were rejected, are pending review or look suspicious, and why.',
-      argsSchema: periodArgs,
+      description: 'Scans that look suspicious or were rejected, and how many are pending review.',
+      argsSchema: scanPeriodArgs,
     },
-    ({ period }) =>
+    ({ period = 'last_7_days' }) =>
       userMessage(
         lines(
-          `Review the suspicious, rejected or pending PatrolTech scans of ${period || 'the last 7 days'}.`,
-          `Use ${toolNameFor('scans.list_recent')}, and ${toolNameFor('scans.count_by_patroller')} to see how they are distributed.`,
+          'Review the suspicious and rejected scans of my PatrolTech account.',
+          `Call ${toolNameFor('scans.list_recent')} with \`period: ${period}\` twice: once with \`suspiciousOnly: true\` and once with \`invalidOnly: true\`. Use ${toolNameFor('scans.count_by_patroller')} with the same period to see how they are distributed and how many are \`pendingReview\`.`,
           'Explain each scan only from its `validation` and `suspicionReasons`. They are independent: a valid scan can be suspicious.',
           'These are activity counts, not an assessment of anyone: do not draw conclusions about a guard on your own.',
           PARTIAL_DATA
@@ -95,7 +93,8 @@ export function registerGuidancePrompts(server: McpServer): void {
         lines(
           'Help me get my PatrolTech account running.',
           `Use ${toolNameFor('account.get_onboarding')} to see what is missing, and help me with the \`nextStep\` it recommends.`,
-          `If it takes a change, prepare it with the propose tools, show me what will change, and call ${CONFIRM_TOOL} only after I agree.`
+          `If it takes a change, prepare it with the propose tools, show me what will change, and call ${CONFIRM_TOOL} only after I agree.`,
+          'If the next step is something the tools cannot do, such as creating a guard, tell me to do it in the PatrolTech dashboard.'
         )
       )
   );
