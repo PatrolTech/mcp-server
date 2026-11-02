@@ -35,7 +35,7 @@ const promptText = async (
 ) => {
   const { messages } = await client.getPrompt({ name, arguments: args });
   const [message] = messages;
-  if (message?.content.type !== 'text') throw new Error(`Prompt ${name} did not return text`);
+  if (message.content.type !== 'text') throw new Error(`Prompt ${name} did not return text`);
   return message.content.text;
 };
 
@@ -109,8 +109,8 @@ describe.each(ERAS)('prompts (%s era)', (era) => {
     expect(scans.suspiciousOnly).toBeDefined();
     expect(scans.invalidOnly).toBeDefined();
     for (const value of ['today', 'yesterday', 'last_7_days', 'last_30_days']) {
-      expect(scans.period?.enum).toContain(value);
-      expect(propertiesOf('patroltech_scans_count_by_patroller').period?.enum).toContain(value);
+      expect(scans.period.enum).toContain(value);
+      expect(propertiesOf('patroltech_scans_count_by_patroller').period.enum).toContain(value);
     }
   });
 
@@ -175,7 +175,7 @@ describe.each(ERAS)('resources (%s era)', (era) => {
     for (const uri of GUIDES) {
       const { contents } = await client.readResource({ uri });
       const [content] = contents;
-      if (!content || !('text' in content)) throw new Error(`${uri} did not return text`);
+      if (!('text' in content)) throw new Error(`${uri} did not return text`);
       expect(content.uri).toBe(uri);
       expect(content.mimeType).toBe('text/markdown');
       const named = namedTools(content.text);
