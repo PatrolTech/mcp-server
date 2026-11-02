@@ -1,5 +1,7 @@
 import { McpServer, type McpRequestContext } from '@modelcontextprotocol/server';
 import type { Catalog, PatrolTechGateway } from '@patroltech/agent-capabilities';
+import { registerGuidancePrompts } from './guidance/prompts.js';
+import { registerGuidanceResources } from './guidance/resources.js';
 import { callIdentityOf } from './mcpRequest.js';
 import { createSessionContextLoader } from '../../application/session/sessionContext.js';
 import { registerAccountContextTool } from './tools/accountContextTool.js';
@@ -48,6 +50,8 @@ export function createMcpServerFactory(deps: McpServerFactoryDeps) {
     registerProposeTools(server, binding, deps.catalog.actions, proposable, deps.writes);
     registerConfirmTools(server, binding, proposable, deps.writes);
     registerQrSheetTool(server, binding, deps.writes);
+    registerGuidancePrompts(server);
+    registerGuidanceResources(server);
     return server;
   };
 }
