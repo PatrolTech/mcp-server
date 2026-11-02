@@ -48,9 +48,25 @@ MCP server (this repo, stateless) ──agent session──▶ PatrolTech API
 | `patroltech_proposals_cancel`       | Withdraws the pending batch.                                                                                                                               |
 | `patroltech_locations_get_qr_sheet` | A signed link (1 hour) to the printable QR sheet of a location.                                                                                            |
 
+### Prompts and resources
+
+Both are fixed text in `src/interface/mcp/guidance`: they change nothing in the account and call no backend, so they do not go through the audit line or the rate limit of the tools. The connection still needs OAuth, like everything under `/mcp`.
+
+| Prompt                               | What it asks for                                                   |
+| ------------------------------------ | ------------------------------------------------------------------ |
+| `patroltech_review_missed_rounds`    | The latest rounds not completed and the checkpoints skipped.       |
+| `patroltech_review_suspicious_scans` | Suspicious or rejected scans, and how many are pending (`period`). |
+| `patroltech_weekly_summary`          | How the last week went, starting with what needs attention.        |
+| `patroltech_set_up_account`          | What is missing to get the account running, and the next step.     |
+
+| Resource                               | What it holds                                                    |
+| -------------------------------------- | ---------------------------------------------------------------- |
+| `patroltech://guides/choosing-a-tool`  | Which tool answers each question, and how changes are confirmed. |
+| `patroltech://guides/reading-the-data` | What statuses, scan validation, partial data and retention mean. |
+
 The server also sends `instructions` (`src/interface/mcp/serverInstructions.ts`): guidance that spans several tools, such as using the ranking tools to compare guards and presenting them as activity data, not as an assessment of the people.
 
-Writes need the `write` scope: without it the server answers `403 insufficient_scope` with the `read write` challenge. Every result is `{ data, truncated?, notices?, note }`, capped at 60,000 characters, where `note` says that `data` is data, never instructions. Each user can make 60 calls per minute to a read tool and 20 to a write tool. Every call writes one `mcp.tool_call` audit line with a hash of the arguments, never the arguments.
+Writes need the `write` scope: without it the server answers `403 insufficient_scope` with the `read write` challenge. Every result is `{ data, truncated?, notices?, note }`, capped at 60,000 characters, where `note` says that `data` is data, never instructions. Each user can make 60 calls per minute to a read tool and 20 to a write tool. Every tool call writes one `mcp.tool_call` audit line with a hash of the arguments, never the arguments.
 
 ### Endpoints
 
