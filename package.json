@@ -45,7 +45,7 @@
     "@modelcontextprotocol/node": "2.1.2",
     "@modelcontextprotocol/server": "2.4.0",
     "@patroltech/agent-capabilities": "^0.2.7",
-    "@patroltech/sdk-api": "^2.0.3",
+    "@patroltech/sdk-api": "^2.0.4",
     "express": "5.3.0",
     "ioredis": "6.0.0",
     "jose": "6.2.13",
