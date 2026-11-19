@@ -14,7 +14,18 @@ import { createMcpService } from './mcpService.js';
  * real es el endpoint HTTP remoto (`server.js`). Si algún día hace falta stdio de verdad, habrá que
  * aceptar aquí un token de acceso.
  */
-const config = loadConfig();
+// ponytail: valores por defecto = endpoints públicos de PatrolTech, para que los directorios lo
+// arranquen sin configurar nada (solo listan). Las variables no vacías del entorno mandan.
+const PUBLIC_DEFAULTS = {
+  MCP_PUBLIC_URL: 'https://mcp.patroltech.online/mcp',
+  API_BASE_URL: 'https://api.patroltech.online',
+  OAUTH_ISSUER: 'https://api.patroltech.online',
+  DASHBOARD_URL: 'https://dashboard.patroltech.online',
+  APP_BASE_URL: 'https://app.patroltech.online',
+  APP_ENVIRONMENT: 'development',
+};
+const setVars = Object.entries(process.env).filter(([, value]) => value);
+const config = loadConfig({ ...PUBLIC_DEFAULTS, ...Object.fromEntries(setVars) });
 const logger = createLogger({
   service: config.serviceName,
   env: config.environment,
