@@ -4,7 +4,8 @@ import type { LogLevel } from '../../config.js';
 /**
  * El logger del servicio: el del paquete más un canal `always` para lo que NO depende de
  * LOG_LEVEL (la auditoría `mcp.tool_call`, requisito de seguridad, y el latido `mcp.heartbeat`,
- * del que depende el monitor de proceso caído). Se escribe a stdout con `level: 'info'`.
+ * del que depende el monitor de proceso caído). Se escribe con `level: 'info'`, a stdout salvo con
+ * `stderrOnly`.
  */
 export interface ServiceLogger extends Logger {
   always(message: string, meta?: Record<string, unknown>): void;
@@ -15,6 +16,8 @@ export interface CreateLoggerOptions {
   env: string;
   version: string;
   level: LogLevel;
+  /** Todo a stderr: con el transporte stdio, stdout es solo del protocolo MCP. */
+  stderrOnly?: boolean;
 }
 
 const LEVEL_RANK: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };
@@ -42,11 +45,11 @@ function stringify(entry: Record<string, unknown>, base: Record<string, unknown>
 }
 
 /**
- * Logger JSON de una línea por entrada: info a stdout, warn y error a stderr; lo que está por
- * debajo de `level` no se escribe, salvo `always`.
+ * Logger JSON de una línea por entrada: info a stdout (a stderr con `stderrOnly`), warn y error a
+ * stderr; lo que está por debajo de `level` no se escribe, salvo `always`.
  */
 export function createLogger(options: CreateLoggerOptions): ServiceLogger {
-  const { service, env, version, level } = options;
+  const { service, env, version, level, stderrOnly = false } = options;
 
   const write = (
     entryLevel: 'info' | 'warn' | 'error',
@@ -62,7 +65,7 @@ export function createLogger(options: CreateLoggerOptions): ServiceLogger {
       version,
     };
     const entry = { ...(meta ? serializeMeta(meta, env) : {}), ...base };
-    const stream = entryLevel === 'info' ? process.stdout : process.stderr;
+    const stream = entryLevel === 'info' && !stderrOnly ? process.stdout : process.stderr;
     stream.write(`${stringify(entry, base)}\n`);
   };
 
