@@ -31,6 +31,7 @@
     "bundle": "node scripts/bundle.mjs",
     "smoke": "node scripts/smoke-bundle.cjs",
     "start": "node dist/server.js",
+    "start:stdio": "node dist/stdio.js",
     "dev": "tsx watch --env-file-if-exists=.env.local src/server.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
