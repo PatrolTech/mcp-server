@@ -70,13 +70,13 @@ Writes need the `write` scope: without it the server answers `403 insufficient_s
 
 ### Endpoints
 
-| Path                                        | Auth   | Purpose                                                                                                       |
-| ------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- |
-| `/mcp` (path of `MCP_PUBLIC_URL`)           | Bearer | The MCP endpoint (POST, GET, DELETE). Validates `Host` and rejects any `Origin`.                              |
-| `/.well-known/oauth-protected-resource/mcp` | none   | Protected resource metadata (RFC 9728), also at the root path.                                                |
-| `/health`                                   | none   | Liveness: `200 {"status":"ok","version":"…"}`.                                                                |
-| `/health/ready`                             | none   | Readiness: `200` if the JWKS answers within 3 s and, with `REDIS_URL`, Redis answers `PING`; otherwise `503`. |
-| `/.well-known/openai-apps-challenge`        | none   | The `OPENAI_APPS_CHALLENGE` token, for the ChatGPT apps directory; `404` without it.                          |
+| Path                                        | Auth   | Purpose                                                                                                                                                       |
+| ------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/mcp` (path of `MCP_PUBLIC_URL`)           | Bearer | The MCP endpoint (POST, GET, DELETE). Validates `Host`, rejects any `Origin` and answers `429` after 120 authentication failures (401/403) per IP and minute. |
+| `/.well-known/oauth-protected-resource/mcp` | none   | Protected resource metadata (RFC 9728), also at the root path.                                                                                                |
+| `/health`                                   | none   | Liveness: `200 {"status":"ok","version":"…"}`.                                                                                                                |
+| `/health/ready`                             | none   | Readiness: `200` if the JWKS answers within 3 s and, with `REDIS_URL`, Redis answers `PING`; otherwise `503`.                                                 |
+| `/.well-known/openai-apps-challenge`        | none   | The `OPENAI_APPS_CHALLENGE` token, for the ChatGPT apps directory; `404` without it.                                                                          |
 
 ## Configuration
 
