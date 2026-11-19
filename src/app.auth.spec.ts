@@ -3,7 +3,7 @@ import request from 'supertest';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OAuthTokenVerifier } from '@modelcontextprotocol/server';
 import type { Logger } from '@patroltech/agent-capabilities';
-import { createApp } from './app.js';
+import { MCP_AUTH_FAILURES_PER_MINUTE, createApp } from './app.js';
 import { loadConfig, type McpServerConfig } from './config.js';
 import { AgentSessionExchanger } from './infrastructure/auth/AgentSessionExchanger.js';
 import { JwksAccessTokenVerifier } from './infrastructure/auth/JwksAccessTokenVerifier.js';
@@ -353,6 +353,53 @@ describe('/mcp bearer authentication', () => {
     const response = await request(app).get('/health');
 
     expect(response.status).toBe(200);
+  });
+});
+
+describe('/mcp authentication-failure limit per IP', () => {
+  it('answers a JSON 429 once an IP spends its authentication failures, before checking the token', async () => {
+    for (let i = 0; i < MCP_AUTH_FAILURES_PER_MINUTE; i++) {
+      expect((await request(app).post('/mcp')).status).toBe(401);
+    }
+    const token = await issuer.sign();
+
+    const response = await request(app).post('/mcp').set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(429);
+    expect(response.body).toEqual({ error: 'rate_limited' });
+    expect(response.headers['retry-after']).toBeDefined();
+    expect(mcpHandler).not.toHaveBeenCalled();
+  });
+
+  it('does not count successful requests: shared client IPs keep working', async () => {
+    const token = await issuer.sign();
+
+    for (let i = 0; i <= MCP_AUTH_FAILURES_PER_MINUTE; i++) {
+      const response = await request(app).post('/mcp').set('Authorization', `Bearer ${token}`);
+      expect(response.status).toBe(200);
+    }
+  });
+
+  it('only counts authentication failures, not other client errors', async () => {
+    for (let i = 0; i <= MCP_AUTH_FAILURES_PER_MINUTE; i++) {
+      const response = await request(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .send('{"broken":');
+      expect(response.status).toBe(400);
+    }
+  });
+
+  it('keeps other IPs untouched (client IP from the single trusted proxy hop)', async () => {
+    for (let i = 0; i < MCP_AUTH_FAILURES_PER_MINUTE; i++) {
+      await request(app).post('/mcp').set('X-Forwarded-For', '203.0.113.1');
+    }
+
+    const blocked = await request(app).post('/mcp').set('X-Forwarded-For', '203.0.113.1');
+    const other = await request(app).post('/mcp').set('X-Forwarded-For', '203.0.113.2');
+
+    expect(blocked.status).toBe(429);
+    expect(other.status).toBe(401);
   });
 });
 
