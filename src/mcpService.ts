@@ -1,4 +1,4 @@
-import { createMcpHandler } from '@modelcontextprotocol/server';
+import { createMcpHandler, type McpServerFactory } from '@modelcontextprotocol/server';
 import {
   SdkPatrolTechGateway,
   buildCatalog,
@@ -45,6 +45,8 @@ export interface McpServiceOptions {
 export interface McpService {
   /** El `mcpHandler` de `createApp`. */
   mcpHandler: express.RequestHandler;
+  /** La misma factoría que sirve `/mcp`, para otros transportes (la entrada stdio). */
+  serverFactory: McpServerFactory;
   close(): Promise<void>;
 }
 
@@ -95,17 +97,22 @@ export function createMcpService(options: McpServiceOptions): McpService {
     urls,
     logger,
   };
-  const handler = createMcpHandler(
-    createMcpServerFactory({ runtime, catalog, gateway, writes, version: config.version }),
-    {
-      onerror: (error) => {
-        logger.warn('mcp.protocol_error', { errorName: error.name, errorMessage: error.message });
-      },
-    }
-  );
+  const serverFactory = createMcpServerFactory({
+    runtime,
+    catalog,
+    gateway,
+    writes,
+    version: config.version,
+  });
+  const handler = createMcpHandler(serverFactory, {
+    onerror: (error) => {
+      logger.warn('mcp.protocol_error', { errorName: error.name, errorMessage: error.message });
+    },
+  });
 
   return {
     mcpHandler: createMcpRequestHandler(handler, logger),
+    serverFactory,
     close: () => handler.close(),
   };
 }

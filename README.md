@@ -120,6 +120,8 @@ curl http://127.0.0.1:3110/health
 | `npm run bundle`                                            | One self-contained ESM file, `dist/bundle/server.mjs` (+ source map): the deployable artifact.                                                                 |
 | `npm run smoke`                                             | Starts the bundle with a test configuration and checks `/health`, the metadata, the challenge and that `/health/ready` reports the unreachable JWKS and Redis. |
 
+`dist/stdio.js` serves the same tools, prompts and resources over stdio, for directories that inspect servers that way (Glama runs it with `mcp-proxy -- node dist/stdio.js`). It needs the same configuration but has no OAuth, so every tool call is refused: use the remote endpoint to work with an account.
+
 Code layout follows the hexagonal style: `src/domain` (pure rules), `src/application` (use cases and their ports), `src/interface/mcp` (the MCP adapter) and `src/infrastructure` (HTTP, OAuth, SDK adapters, Redis, logging).
 
 ## Self-hosting

@@ -55,6 +55,20 @@ describe('createLogger', () => {
     ]);
   });
 
+  it('with stderrOnly writes info and always to stderr, leaving stdout to the stdio protocol', () => {
+    const { out, err } = captureStreams();
+    const logger = createLogger({ ...base, level: 'info', stderrOnly: true });
+
+    logger.info('x');
+    logger.always('y');
+
+    expect(out).toHaveLength(0);
+    expect(err.map((line) => (JSON.parse(line) as { message: string }).message)).toEqual([
+      'x',
+      'y',
+    ]);
+  });
+
   it('serializes meta.err as name and message, without the stack in production', () => {
     const { err } = captureStreams();
 
